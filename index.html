@@ -92,6 +92,10 @@
 <div id="content"></div>
 <script>
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  var reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if (!reloading) { reloading = true; location.reload(); }
+  });
   navigator.serviceWorker.register('sw.js').catch(function(){});
 }
 </script>
