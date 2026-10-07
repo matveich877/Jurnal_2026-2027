@@ -45,11 +45,13 @@
   th.crn, td.crn { min-width: 26px; width: 26px; position: sticky; left: 0; z-index: 3; font-weight: 700; color: #888; }
   th.crn { background: #e8edf7; z-index: 7; }
   td.crn { background: #f7f9fc; }
-  td.day { min-width: 34px; cursor: pointer; font-weight: 700; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
-  td.day:active { background: #dbe5f1; }
+  td.day { min-width: 34px; font-weight: 700; user-select: none; -webkit-user-select: none; }
+  .daybtn { display: block; width: 100%; height: 38px; border: none; background: transparent; font: inherit; font-weight: 700; cursor: pointer; color: inherit; padding: 0; touch-action: manipulation; }
+  .daybtn:active { background: #dbe5f1; }
   td.wknd { background: #ececec; color: #aaa; cursor: default; }
   td.m1 { color: #2e7d32; background: #e8f5e9; }
   td.mb { color: #d84315; background: #ffe0cc; }
+  td.m2 { color: #1565c0; background: #e3f2fd; }
   .subhead { font-size: 11px; color: #777; font-weight: 400; display: block; }
   h2 { font-size: 15px; margin: 14px 12px 6px; color: #305496; }
   .sumwrap { overflow-x: auto; padding: 0 8px 20px; -webkit-overflow-scrolling: touch; }
@@ -60,7 +62,7 @@
   tr.total td { background: #fce4d6; font-weight: 700; }
   td.debt-pos { color: #c62828; font-weight: 700; }
   footer { font-size: 11px; color: #999; padding: 12px; text-align: center; }
-  .del { display: inline-block; margin-left: 5px; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; background: #eee; color: #c62828; font-size: 11px; cursor: pointer; vertical-align: middle; }
+  .del { display: inline-block; margin-left: 5px; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; background: #eee; color: #c62828; font-size: 11px; cursor: pointer; vertical-align: middle; border: none; padding: 0; font-family: inherit; }
   .del:active { background: #f8cbad; }
   .popup-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; display: none; align-items: center; justify-content: center; }
   .popup { background: #fff; border-radius: 14px; padding: 18px; width: 280px; max-width: 86vw; box-shadow: 0 8px 30px rgba(0,0,0,.3); }
@@ -69,6 +71,7 @@
   .popup-btns { display: grid; gap: 8px; }
   .popup-btns button { border: none; border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
   #pOne { background: #e8f5e9; color: #2e7d32; }
+  #pTwo { background: #e3f2fd; color: #1565c0; }
   #pB { background: #ffe0cc; color: #d84315; }
   #pClear { background: #eee; color: #555; }
   #pCancel { background: #f5f5f5; color: #999; }
@@ -76,7 +79,7 @@
 </head>
 <body>
 <header>
-  <h1>📋 Журнал посещаемости 2026–2027</h1>
+  <h1>📋 Журнал посещаемости 2026–2027 <span style="font-size:11px;opacity:.7">v2.1</span></h1>
   <div class="controls">
     <label style="font-size:13px;">Цена занятия: <input id="priceInput" type="number" value="500" min="0" step="50"> ₽</label>
     <button id="addStudent">+ Ученик</button>
@@ -87,7 +90,7 @@
     <span id="saved"></span>
   </div>
 </header>
-<div class="legend">Нажмите на день — появится выбор: <b class="c1">1</b> (был) или <b class="cb">Б</b> (болезнь). Красный ✕ у фамилии — удалить ученика. Шапка с датами остаётся на месте при прокрутке.</div>
+<div class="legend">Нажмите на день — выбор: <b class="c1">1</b> (был) • <b style="color:#1565c0">2</b> (дважды) • <b class="cb">Б</b> (болезнь). Красный ✕ у фамилии — удалить ученика. Версия приложения указана в заголовке.</div>
 <nav id="tabs"></nav>
 <div id="content"></div>
 <script>
@@ -105,6 +108,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     <p>Выберите отметку:</p>
     <div class="popup-btns">
       <button id="pOne">1 — тренировался</button>
+      <button id="pTwo">2 — приходил дважды</button>
       <button id="pB">Б — болезнь</button>
       <button id="pClear">Очистить ячейку</button>
       <button id="pCancel">Отмена</button>
@@ -189,7 +193,7 @@ function getMarks(si, mi){ return (state.marks[si] && state.marks[si][mkey(mi)])
 function getPaid(si, mi){ return (state.paid[si] && state.paid[si][mkey(mi)]) || 0; }
 function calcStudent(si, mi){
   var mk = getMarks(si, mi), att = 0, b = 0;
-  Object.keys(mk).forEach(function(d){ if (mk[d]==='1') att++; else if (mk[d]==='Б') b++; });
+  Object.keys(mk).forEach(function(d){ if (mk[d]==='1') att++; else if (mk[d]==='2') att+=2; else if (mk[d]==='Б') b++; });
   var due = att * (+state.price || 0);
   var paid = getPaid(si, mi);
   return {att:att, b:b, due:due, paid:paid, debt:due-paid};
@@ -215,8 +219,9 @@ function renderMonth(mi){
       var v = mk[d] || '';
       var cls = 'day';
       if (v === '1') cls += ' m1';
+      else if (v === '2') cls += ' m2';
       else if (v === 'Б') cls += ' mb';
-      html += '<td class="' + cls + '" data-si="' + si + '" data-d="' + d + '">' + v + '</td>';
+      html += '<td class="' + cls + '"><button class="daybtn" data-si="' + si + '" data-d="' + d + '">' + v + '</button></td>';
     }
     html += '</tr>';
   });
@@ -233,15 +238,14 @@ function renderMonth(mi){
   html += '</table></div>';
   c.innerHTML = html;
 
-  c.querySelectorAll('td.day').forEach(function(td){
-    td.addEventListener('pointerup', function(e){
-      e.preventDefault();
-      openPopup(+td.dataset.si, +td.dataset.d);
+  c.querySelectorAll('button.daybtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      openPopup(+btn.dataset.si, +btn.dataset.d);
     });
   });
   c.querySelectorAll('.del').forEach(function(sp){
-    sp.addEventListener('pointerup', function(e){
-      e.preventDefault(); e.stopPropagation();
+    sp.addEventListener('click', function(e){
+      e.stopPropagation();
       var si = +sp.dataset.si;
       if (!confirm('Удалить из журнала: ' + state.students[si] + '?\nЕго отметки и оплаты тоже удалятся.')) return;
       state.students.splice(si, 1);
@@ -330,6 +334,7 @@ function setMark(v){
   save(); renderMonth(curTab);
 }
 document.getElementById('pOne').addEventListener('click', function(){ setMark('1'); });
+document.getElementById('pTwo').addEventListener('click', function(){ setMark('2'); });
 document.getElementById('pB').addEventListener('click', function(){ setMark('Б'); });
 document.getElementById('pClear').addEventListener('click', function(){ setMark(null); });
 document.getElementById('pCancel').addEventListener('click', closePopup);
