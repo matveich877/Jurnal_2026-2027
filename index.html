@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Журнал посещаемости 2026–2027</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#305496">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { overscroll-behavior: none; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #f0f2f5; color: #222; }
+  header { background: #305496; color: #fff; padding: 10px 12px; }
+  header h1 { font-size: 16px; margin: 0 0 8px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .controls button, .controls label.btn {
+    background: #fff; color: #305496; border: none; border-radius: 8px;
+    padding: 7px 12px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .controls button:active { background: #dbe5f1; }
+  #priceInput { width: 70px; padding: 6px; border-radius: 8px; border: none; font-size: 14px; text-align: center; }
+  #saved { font-size: 12px; opacity: .8; margin-left: auto; }
+  nav { display: flex; overflow-x: auto; background: #fff; position: sticky; top: 0; z-index: 40; border-bottom: 1px solid #ddd; }
+  nav button {
+    flex: 0 0 auto; border: none; background: none; padding: 10px 14px; font-size: 14px;
+    cursor: pointer; border-bottom: 3px solid transparent; color: #555;
+  }
+  nav button.active { border-bottom-color: #305496; color: #305496; font-weight: 700; }
+  .legend { font-size: 12px; color: #666; padding: 6px 12px; background: #fff; }
+  .legend b.c1 { color: #2e7d32; } .legend b.cb { color: #d84315; }
+  /* таблица отметок: своя прокрутка + липкая шапка с датами */
+  .wrap { overflow: auto; padding: 8px; -webkit-overflow-scrolling: touch; }
+  .marks-box { max-height: 56vh; overflow: auto; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.12); -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; background: #fff; }
+  th, td { border: 1px solid #cfd4dc; text-align: center; font-size: 13px; }
+  thead th { position: sticky; top: 0; background: #e8edf7; font-weight: 700; padding: 5px 3px; z-index: 5; }
+  td { padding: 0; height: 38px; }
+  td.name, th.name { text-align: left; padding: 5px 8px; white-space: nowrap; position: sticky; left: 0; background: #fff; z-index: 2; min-width: 130px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+  th.name { background: #e8edf7; z-index: 6; left: 26px; }
+  td.name { left: 26px; }
+  th.crn, td.crn { min-width: 26px; width: 26px; position: sticky; left: 0; z-index: 3; font-weight: 700; color: #888; }
+  th.crn { background: #e8edf7; z-index: 7; }
+  td.crn { background: #f7f9fc; }
+  td.day { min-width: 34px; cursor: pointer; font-weight: 700; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  td.day:active { background: #dbe5f1; }
+  td.wknd { background: #ececec; color: #aaa; cursor: default; }
+  td.m1 { color: #2e7d32; background: #e8f5e9; }
+  td.mb { color: #d84315; background: #ffe0cc; }
+  .subhead { font-size: 11px; color: #777; font-weight: 400; display: block; }
+  h2 { font-size: 15px; margin: 14px 12px 6px; color: #305496; }
+  .sumwrap { overflow-x: auto; padding: 0 8px 20px; -webkit-overflow-scrolling: touch; }
+  .sumwrap td, .sumwrap th { padding: 6px 8px; }
+  .sumwrap td { height: auto; }
+  .sumwrap input { width: 80px; border: 1px solid #ccc; border-radius: 6px; padding: 5px; font-size: 14px; text-align: right; background: #fffbe6; }
+  td.money { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.total td { background: #fce4d6; font-weight: 700; }
+  td.debt-pos { color: #c62828; font-weight: 700; }
+  footer { font-size: 11px; color: #999; padding: 12px; text-align: center; }
+  .del { display: inline-block; margin-left: 5px; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; background: #eee; color: #c62828; font-size: 11px; cursor: pointer; vertical-align: middle; }
+  .del:active { background: #f8cbad; }
+  .popup-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; display: none; align-items: center; justify-content: center; }
+  .popup { background: #fff; border-radius: 14px; padding: 18px; width: 280px; max-width: 86vw; box-shadow: 0 8px 30px rgba(0,0,0,.3); }
+  .popup h3 { margin: 0 0 4px; font-size: 16px; }
+  .popup p { margin: 0 0 14px; color: #666; font-size: 14px; }
+  .popup-btns { display: grid; gap: 8px; }
+  .popup-btns button { border: none; border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  #pOne { background: #e8f5e9; color: #2e7d32; }
+  #pB { background: #ffe0cc; color: #d84315; }
+  #pClear { background: #eee; color: #555; }
+  #pCancel { background: #f5f5f5; color: #999; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📋 Журнал посещаемости 2026–2027</h1>
+  <div class="controls">
+    <label style="font-size:13px;">Цена занятия: <input id="priceInput" type="number" value="500" min="0" step="50"> ₽</label>
+    <button id="addStudent">+ Ученик</button>
+    <button id="exportBtn">⬇ Экспорт</button>
+    <button id="importBtn">⬆ Импорт</button>
+    <button id="resetBtn">⟲ Сброс</button>
+    <input type="file" id="importFile" accept=".json" style="display:none">
+    <span id="saved"></span>
+  </div>
+</header>
+<div class="legend">Нажмите на день — появится выбор: <b class="c1">1</b> (был) или <b class="cb">Б</b> (болезнь). Красный ✕ у фамилии — удалить ученика. Шапка с датами остаётся на месте при прокрутке.</div>
+<nav id="tabs"></nav>
+<div id="content"></div>
+<script>
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+</script>
+<div id="popup" class="popup-bg">
+  <div class="popup">
+    <h3 id="popupTitle"></h3>
+    <p>Выберите отметку:</p>
+    <div class="popup-btns">
+      <button id="pOne">1 — тренировался</button>
+      <button id="pB">Б — болезнь</button>
+      <button id="pClear">Очистить ячейку</button>
+      <button id="pCancel">Отмена</button>
+    </div>
+  </div>
+</div>
+<footer>Данные сохраняются автоматически в этом браузере. Делайте «Экспорт» для резервной копии.</footer>
+
+<script>
+var MONTHS = [
+  {y:2026,m:9},{y:2026,m:10},{y:2026,m:11},{y:2026,m:12},
+  {y:2027,m:1},{y:2027,m:2},{y:2027,m:3},{y:2027,m:4},
+  {y:2027,m:5},{y:2027,m:6},{y:2027,m:7},{y:2027,m:8}
+];
+var MN = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+var WD = ['вс','пн','вт','ср','чт','пт','сб'];
+var KEY = 'journal2026v1';
+
+/* Перенесено из вашего старого файла (посещаемость): сентябрь и октябрь */
+var PRELOAD_MARKS = {"Албычаков Владимир":{"2026-9":{"3":"1","7":"1","8":"1","14":"1","15":"1","29":"1","30":"1"},"2026-10":{"6":"1"}},"Албычаков Михаил":{"2026-9":{"3":"1","7":"1","8":"1","14":"1","15":"1","29":"1","30":"1"},"2026-10":{"6":"1"}},"Аристов Виктор":{"2026-9":{"2":"1","14":"1","23":"1","30":"1"},"2026-10":{"5":"1"}},"Афанасьев Дмитрий":{"2026-9":{"2":"1","14":"1","23":"1"},"2026-10":{"6":"1"}},"Бурнышев Артём":{"2026-9":{"2":"1","4":"1","9":"1","23":"1"}},"Вагнер Егор":{"2026-9":{"2":"1","3":"1","7":"1","8":"1","15":"1","22":"1","23":"1","29":"1","30":"1"},"2026-10":{"1":"1","5":"1"}},"Волобуев Владимир":{"2026-9":{"2":"1","3":"1","7":"1","8":"1","15":"1","22":"1","23":"1","30":"1"},"2026-10":{"1":"1","5":"1"}},"Воронова Яна":{"2026-9":{"2":"1","4":"1","14":"1","23":"1","30":"1"},"2026-10":{"5":"1"}},"Гросс Анастасия":{"2026-9":{"2":"1","14":"1","23":"1","30":"1"}},"Гросс Артём":{"2026-9":{"2":"1","8":"1","14":"1","15":"1","22":"1","23":"1","29":"1","30":"1"},"2026-10":{"1":"1","6":"1"}},"Дорбан Савелий":{"2026-9":{"2":"1","14":"1","23":"1","30":"1"},"2026-10":{"5":"1","6":"1"}},"Егоров Мирон":{"2026-9":{"2":"1","3":"1","7":"1","15":"1","22":"1","23":"1","29":"1","30":"1"},"2026-10":{"1":"1","5":"1"}},"Ермаков Дмитрий":{"2026-9":{"4":"1","7":"1","9":"1","22":"1","23":"1","30":"1"},"2026-10":{"2":"1","5":"1"}},"Кожевникова Софья":{"2026-9":{"2":"1","14":"1","23":"1","30":"1"},"2026-10":{"5":"1"}},"Костерин Алексей":{"2026-9":{"14":"1","15":"1"}},"Кречетов Егор":{"2026-9":{"2":"1","3":"1","7":"1","8":"1","15":"1","22":"1","23":"1","29":"1","30":"1"},"2026-10":{"1":"1","5":"1"}},"Матвеев Гордей":{"2026-9":{"2":"1","4":"1","7":"1","9":"1","14":"1","15":"1","22":"1","23":"1","30":"1"},"2026-10":{"2":"1","5":"1","6":"1"}},"Матвеев Дарий":{"2026-9":{"2":"1","3":"1","4":"1","7":"1","8":"1","9":"1","14":"1","15":"1","22":"1","23":"1","29":"1"},"2026-10":{"1":"1","2":"1","5":"1","6":"1"}},"Петров Лев":{"2026-9":{"2":"1","4":"1","14":"1","23":"1","30":"1"},"2026-10":{"5":"1","6":"1"}},"Рубашин Фёдор":{"2026-9":{"7":"1","8":"1","15":"1"},"2026-10":{"5":"1"}},"Сарапулов Демид":{"2026-9":{"4":"1"}},"Сметанин Арсений":{"2026-9":{"2":"1"}},"Сметанин Матвей":{"2026-9":{"2":"1","4":"1","7":"1","9":"1","15":"1","22":"1"}},"Совгиря Иван":{"2026-9":{"3":"1","7":"1","8":"1","14":"1","15":"1","22":"1"},"2026-10":{"6":"1"}},"Суханов Алексей":{"2026-9":{"22":"1","30":"1"},"2026-10":{"5":"1"}},"Терешенко Денис":{"2026-9":{"2":"1","3":"1","7":"1","8":"1","23":"1","30":"1"},"2026-10":{"5":"1"}}};
+
+var DEF_STUDENTS = ['Албычаков Владимир','Албычаков Михаил','Аристов Виктор','Афанасьев Дмитрий','Бурнышев Артём','Вагнер Егор','Волобуев Владимир','Воронова Яна','Гросс Анастасия','Гросс Артём','Дорбан Савелий','Егоров Мирон','Ермаков Дмитрий','Кожевникова Софья','Костерин Алексей','Кречетов Егор','Лементуев Лев','Матвеев Гордей','Матвеев Дарий','Муха Виолеттта','Петров Лев','Рубашин Фёдор','Сарапулов Демид','Сметанин Арсений','Сметанин Матвей','Совгиря Иван','Суханов Алексей','Терешенко Денис'];
+
+var state = load();
+var curTab = 0;
+
+function load(){
+  var s = null;
+  try { s = JSON.parse(localStorage.getItem(KEY)); } catch(e){}
+  if (!s || !s.students) {
+    s = { price: 500, students: DEF_STUDENTS.slice(), marks: {}, paid: {} };
+  }
+  /* подмешиваем перенесённые отметки в пустые ячейки (ваши правки не затираем) */
+  Object.keys(PRELOAD_MARKS).forEach(function(name){
+    var si = s.students.indexOf(name);
+    if (si < 0) return;
+    if (!s.marks[si]) s.marks[si] = {};
+    Object.keys(PRELOAD_MARKS[name]).forEach(function(k){
+      if (!s.marks[si][k]) s.marks[si][k] = {};
+      Object.keys(PRELOAD_MARKS[name][k]).forEach(function(d){
+        if (!s.marks[si][k][d]) s.marks[si][k][d] = PRELOAD_MARKS[name][k][d];
+      });
+    });
+  });
+  localStorage.setItem(KEY, JSON.stringify(s));
+  return s;
+}
+function save(){
+  localStorage.setItem(KEY, JSON.stringify(state));
+  var el = document.getElementById('saved');
+  el.textContent = 'Сохранено ✓';
+  clearTimeout(save._t);
+  save._t = setTimeout(function(){ el.textContent = ''; }, 1200);
+}
+function daysIn(y,m){ return new Date(y, m, 0).getDate(); }
+function mkey(mi){ return MONTHS[mi].y + '-' + MONTHS[mi].m; }
+function fmt(n){ return n.toLocaleString('ru-RU'); }
+
+/* ---------- вкладки ---------- */
+var tabs = document.getElementById('tabs');
+MONTHS.forEach(function(mm, i){
+  var b = document.createElement('button');
+  b.textContent = MN[mm.m-1].slice(0,3);
+  b.onclick = function(){ curTab = i; render(); };
+  tabs.appendChild(b);
+});
+var by = document.createElement('button');
+by.textContent = 'Итоги года';
+by.onclick = function(){ curTab = 'year'; render(); };
+tabs.appendChild(by);
+
+function render(){
+  var btns = tabs.children;
+  for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+  if (curTab === 'year') { btns[btns.length-1].classList.add('active'); renderYear(); }
+  else { btns[curTab].classList.add('active'); renderMonth(curTab); }
+  document.getElementById('priceInput').value = state.price;
+}
+
+/* ---------- месяц ---------- */
+function getMarks(si, mi){ return (state.marks[si] && state.marks[si][mkey(mi)]) || {}; }
+function getPaid(si, mi){ return (state.paid[si] && state.paid[si][mkey(mi)]) || 0; }
+function calcStudent(si, mi){
+  var mk = getMarks(si, mi), att = 0, b = 0;
+  Object.keys(mk).forEach(function(d){ if (mk[d]==='1') att++; else if (mk[d]==='Б') b++; });
+  var due = att * (+state.price || 0);
+  var paid = getPaid(si, mi);
+  return {att:att, b:b, due:due, paid:paid, debt:due-paid};
+}
+
+function renderMonth(mi){
+  var mm = MONTHS[mi], nd = daysIn(mm.y, mm.m), c = document.getElementById('content');
+  /* запоминаем прокрутку, чтобы после отметки не прыгать в начало */
+  var oldBox = c.querySelector('.marks-box');
+  var keepSL = oldBox ? oldBox.scrollLeft : 0;
+  var keepST = oldBox ? oldBox.scrollTop : 0;
+  var keepY  = window.scrollY;
+  var html = '<div class="wrap"><div class="marks-box"><table><thead><tr><th class="crn">№</th><th class="name">ФИО</th>';
+  for (var d = 1; d <= nd; d++){
+    var wd = new Date(mm.y, mm.m-1, d).getDay();
+    html += '<th>' + d + '<span class="subhead">' + WD[wd] + '</span></th>';
+  }
+  html += '</tr></thead><tbody>';
+  state.students.forEach(function(name, si){
+    var mk = getMarks(si, mi);
+    html += '<tr><td class="crn">' + (si+1) + '</td><td class="name" title="' + name + '">' + name + '<span class="del" data-si="' + si + '">✕</span></td>';
+    for (var d = 1; d <= nd; d++){
+      var v = mk[d] || '';
+      var cls = 'day';
+      if (v === '1') cls += ' m1';
+      else if (v === 'Б') cls += ' mb';
+      html += '<td class="' + cls + '" data-si="' + si + '" data-d="' + d + '">' + v + '</td>';
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+
+  html += '<h2>' + MN[mm.m-1] + ' ' + mm.y + ' — оплата</h2><div class="sumwrap"><table><tr><th>№</th><th style="text-align:left">ФИО</th><th>Занятий</th><th>Б</th><th>К оплате, ₽</th><th>Оплачено, ₽</th><th>Долг, ₽</th></tr>';
+  var t = {att:0,b:0,due:0,paid:0,debt:0};
+  state.students.forEach(function(name, si){
+    var r = calcStudent(si, mi);
+    t.att+=r.att; t.b+=r.b; t.due+=r.due; t.paid+=r.paid; t.debt+=r.debt;
+    html += '<tr><td>' + (si+1) + '</td><td style="text-align:left;white-space:nowrap">' + name + '</td><td>' + r.att + '</td><td>' + r.b + '</td><td class="money">' + fmt(r.due) + '</td><td><input type="number" inputmode="numeric" value="' + (r.paid||'') + '" data-si="' + si + '"></td><td class="money' + (r.debt>0?' debt-pos':'') + '">' + fmt(r.debt) + '</td></tr>';
+  });
+  html += '<tr class="total"><td></td><td style="text-align:left">ИТОГО</td><td>' + t.att + '</td><td>' + t.b + '</td><td class="money">' + fmt(t.due) + '</td><td class="money">' + fmt(t.paid) + '</td><td class="money">' + fmt(t.debt) + '</td></tr>';
+  html += '</table></div>';
+  c.innerHTML = html;
+
+  c.querySelectorAll('td.day').forEach(function(td){
+    td.addEventListener('pointerup', function(e){
+      e.preventDefault();
+      openPopup(+td.dataset.si, +td.dataset.d);
+    });
+  });
+  c.querySelectorAll('.del').forEach(function(sp){
+    sp.addEventListener('pointerup', function(e){
+      e.preventDefault(); e.stopPropagation();
+      var si = +sp.dataset.si;
+      if (!confirm('Удалить из журнала: ' + state.students[si] + '?\nЕго отметки и оплаты тоже удалятся.')) return;
+      state.students.splice(si, 1);
+      var nm = {}, np = {};
+      Object.keys(state.marks).forEach(function(k){ k = +k; if (k === si) return; nm[k > si ? k - 1 : k] = state.marks[k]; });
+      Object.keys(state.paid).forEach(function(k){ k = +k; if (k === si) return; np[k > si ? k - 1 : k] = state.paid[k]; });
+      state.marks = nm; state.paid = np;
+      save(); renderMonth(mi);
+    });
+  });
+  c.querySelectorAll('input[data-si]').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var si = +inp.dataset.si, k = mkey(mi);
+      if (!state.paid[si]) state.paid[si] = {};
+      state.paid[si][k] = +inp.value || 0;
+      save(); renderMonth(mi);
+    });
+  });
+  /* возвращаем прокрутку на место */
+  var nb = c.querySelector('.marks-box');
+  if (nb) { nb.scrollLeft = keepSL; nb.scrollTop = keepST; }
+  window.scrollTo(0, keepY);
+}
+
+/* ---------- итоги года ---------- */
+function renderYear(){
+  var c = document.getElementById('content');
+  var html = '<h2 style="margin-top:12px">Итоги за год</h2><div class="sumwrap"><table><tr><th>№</th><th style="text-align:left">ФИО</th><th>Занятий</th><th>Б</th><th>К оплате, ₽</th><th>Оплачено, ₽</th><th>Долг, ₽</th></tr>';
+  var t = {att:0,b:0,due:0,paid:0,debt:0};
+  state.students.forEach(function(name, si){
+    var r = {att:0,b:0,due:0,paid:0,debt:0};
+    for (var mi = 0; mi < 12; mi++){
+      var x = calcStudent(si, mi);
+      r.att+=x.att; r.b+=x.b; r.due+=x.due; r.paid+=x.paid; r.debt+=x.debt;
+    }
+    t.att+=r.att; t.b+=r.b; t.due+=r.due; t.paid+=r.paid; t.debt+=r.debt;
+    html += '<tr><td>' + (si+1) + '</td><td style="text-align:left;white-space:nowrap">' + name + '</td><td>' + r.att + '</td><td>' + r.b + '</td><td class="money">' + fmt(r.due) + '</td><td class="money">' + fmt(r.paid) + '</td><td class="money' + (r.debt>0?' debt-pos':'') + '">' + fmt(r.debt) + '</td></tr>';
+  });
+  html += '<tr class="total"><td></td><td style="text-align:left">ИТОГО</td><td>' + t.att + '</td><td>' + t.b + '</td><td class="money">' + fmt(t.due) + '</td><td class="money">' + fmt(t.paid) + '</td><td class="money">' + fmt(t.debt) + '</td></tr>';
+  html += '</table></div>';
+  c.innerHTML = html;
+}
+
+/* ---------- действия ---------- */
+document.getElementById('priceInput').addEventListener('change', function(){
+  state.price = +this.value || 500; save(); render();
+});
+document.getElementById('addStudent').addEventListener('click', function(){
+  var name = prompt('Фамилия и имя нового ученика:');
+  if (name && name.trim()){ state.students.push(name.trim()); save(); render(); }
+});
+document.getElementById('exportBtn').addEventListener('click', function(){
+  var blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'журнал-резервная-копия-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if (!confirm('Сбросить ВСЕ отметки и оплаты?\nВернётся только посещаемость из исходного файла (сентябрь–октябрь).\nСначала сделайте «Экспорт», если нужна копия.')) return;
+  localStorage.removeItem(KEY);
+  state = load();
+  save();
+  render();
+  alert('Журнал сброшен.');
+});
+/* ---------- всплывающее окно отметки ---------- */
+var pendingCell = null;
+function openPopup(si, d){
+  pendingCell = {si: si, d: d};
+  document.getElementById('popupTitle').textContent =
+    state.students[si] + ' — ' + d + ' ' + MN[MONTHS[curTab].m - 1];
+  document.getElementById('popup').style.display = 'flex';
+}
+function closePopup(){
+  pendingCell = null;
+  document.getElementById('popup').style.display = 'none';
+}
+function setMark(v){
+  if (!pendingCell) return;
+  var si = pendingCell.si, d = pendingCell.d, k = mkey(curTab);
+  if (!state.marks[si]) state.marks[si] = {};
+  if (!state.marks[si][k]) state.marks[si][k] = {};
+  if (v) state.marks[si][k][d] = v; else delete state.marks[si][k][d];
+  closePopup();
+  save(); renderMonth(curTab);
+}
+document.getElementById('pOne').addEventListener('click', function(){ setMark('1'); });
+document.getElementById('pB').addEventListener('click', function(){ setMark('Б'); });
+document.getElementById('pClear').addEventListener('click', function(){ setMark(null); });
+document.getElementById('pCancel').addEventListener('click', closePopup);
+document.getElementById('popup').addEventListener('click', function(e){
+  if (e.target === this) closePopup();
+});
+
+document.getElementById('importBtn').addEventListener('click', function(){ document.getElementById('importFile').click(); });
+document.getElementById('importFile').addEventListener('change', function(e){
+  var f = e.target.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function(){
+    try {
+      var s = JSON.parse(r.result);
+      if (!s.students) throw 0;
+      state = s; save(); render(); alert('Данные загружены.');
+    } catch(err){ alert('Не удалось загрузить файл.'); }
+  };
+  r.readAsText(f);
+});
+
+render();
+</script>
+</body>
+</html>
